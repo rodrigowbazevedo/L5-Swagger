@@ -58,6 +58,11 @@ class Generator
      * @var string
      */
     protected $swaggerVersion;
+    
+    /**
+     * @var SecurityDefinitions
+     */
+    protected $security;
 
     public function __construct(
         $annotationsDir,
@@ -68,7 +73,8 @@ class Generator
         array $constants,
         bool $yamlCopyRequired,
         ?string $basePath,
-        string $swaggerVersion
+        string $swaggerVersion,
+        SecurityDefinitions $security
     ) {
         $this->annotationsDir = $annotationsDir;
         $this->docDir = $docDir;
@@ -79,6 +85,7 @@ class Generator
         $this->yamlCopyRequired = $yamlCopyRequired;
         $this->basePath = $basePath;
         $this->swaggerVersion = $swaggerVersion;
+        $this->security = $security;
     }
 
     public function generateDocs(): void
@@ -193,8 +200,7 @@ class Generator
     {
         $this->swagger->saveAs($this->docsFile);
 
-        $security = new SecurityDefinitions();
-        $security->generate($this->docsFile);
+        $this->security->generate($this->docsFile);
 
         return $this;
     }

@@ -4,27 +4,56 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Route;
 
 Route::group(['namespace' => 'L5Swagger'], function (Router $router) {
-    $router->get(config('l5-swagger.routes.api'), [
-        'as' => 'l5-swagger.api',
-        'middleware' => config('l5-swagger.routes.middleware.api', []),
-        'uses' => '\L5Swagger\Http\Controllers\SwaggerController@api',
-    ]);
+    $legacy = config('l5-swagger.legacy', false);
+    $documentations = config('l5-swagger.documentations', false);
 
-    $router->any(config('l5-swagger.routes.docs').'/{jsonFile?}', [
-        'as' => 'l5-swagger.docs',
-        'middleware' => config('l5-swagger.routes.middleware.docs', []),
-        'uses' => '\L5Swagger\Http\Controllers\SwaggerController@docs',
-    ]);
+    if ($legacy) {
+        $documentations = [
+            'legacy' => config('l5-swagger')
+        ];
+    }
 
-    $router->get(config('l5-swagger.routes.docs').'/asset/{asset}', [
-        'as' => 'l5-swagger.asset',
-        'middleware' => config('l5-swagger.routes.middleware.asset', []),
-        'uses' => '\L5Swagger\Http\Controllers\SwaggerAssetController@index',
-    ]);
+    foreach ($documentations as $name => $config) {
 
-    $router->get(config('l5-swagger.routes.oauth2_callback'), [
-        'as' => 'l5-swagger.oauth2_callback',
-        'middleware' => config('l5-swagger.routes.middleware.oauth2_callback', []),
-        'uses' => '\L5Swagger\Http\Controllers\SwaggerController@oauth2Callback',
-    ]);
+        if (!isset($config['routes'])) {
+            continue;
+        }
+
+        Route::group([
+            'middleware' => \L5Swagger\Http\Middleware\Config::class,
+            'documentation' => $name
+        ], function(Router $router) use ($name, $config) {
+
+            if (isset($config['routes']['api'])) {
+                $router->get($config['routes']['api'], [
+                    'as' => 'l5-swagger.' . $name . '.api',
+                    'middleware' => $config['routes']['middleware']['api'] ?? [],
+                    'uses' => '\L5Swagger\Http\Controllers\SwaggerController@api',
+                ]);
+            }
+
+            if (isset($config['routes']['docs'])) {
+                $router->get($config['routes']['docs'] .'/{jsonFile?}', [
+                    'as' => 'l5-swagger.' . $name . '.docs',
+                    'middleware' => $config['routes']['middleware']['docs'] ?? [],
+                    'uses' => '\L5Swagger\Http\Controllers\SwaggerController@docs',
+                ]);
+
+                $router->get($config['routes']['docs'] . '/asset/{asset}', [
+                    'as' => 'l5-swagger.' . $name . '.asset',
+                    'middleware' => $config['routes']['middleware']['asset'] ?? [],
+                    'uses' => '\L5Swagger\Http\Controllers\SwaggerAssetController@index',
+                ]);
+            }
+
+            if (isset($config['routes']['oauth2_callback'])) {
+                $router->get($config['routes']['oauth2_callback'], [
+                    'as' => 'l5-swagger.' . $name . '.oauth2_callback',
+                    'middleware' => $config['routes']['middleware']['oauth2_callback'] ?? [],
+                    'uses' => '\L5Swagger\Http\Controllers\SwaggerController@oauth2Callback',
+                ]);
+            }
+        });
+
+    }
 });
